@@ -1,0 +1,68 @@
+{% extends "index-base.html" %}
+
+{% block head %}
+  <title>BuFeiHua - BFH</title>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-9">
+        <ul class="nav nav-tabs">
+          <li role="presentation" class="active"><a href="#">最热门</a></li>
+          <li role="presentation"><a href="#">最新</a></li>
+          <li role="presentation"><a href="#">最多票</a></li>
+        </ul>
+        <div class="question row">
+          <div class="col-md-2 hidden-xs text-center">
+          </div>
+          <div class="col-md-10">
+          {% for q in out %}
+            <div class="question-name">
+              <h4><a href="/p/{{ q['_id'] }}">{{ q['title'] }}</a></h4>
+              <div>
+              {% for tag in q['tags'] %}
+              <a class="btn btn-link btn-sm" href="/tag/{{ tag }}" role="button">{{ tag }}</a>
+              {% endfor %}
+              by <a href="/user/{{q.get('creator','X')[0]}}_{{q.get('creator','XX')[1]}}"> {{q.get('creator','XXX')[2]}}</a>
+                @ {{ (q['lastModified']) }}
+              </div>
+            </div>
+          {% endfor %}
+          </div>
+        </div>
+        <ul class="pagination">
+          <li class="disabled"><a href="#" aria-label="Previous"><span aria-hidden="true">&laquo;</span></a></li>
+          <li><a href="?page=1">1 <span class="sr-only">(current)</span></a></li>
+          <li><a href="?page=2">2 </a></li>
+          <li><a href="?page=3">3 </a></li>
+          <li><a href="#" aria-label="Next"><span aria-hidden="true">&raquo;</span></a></li>
+        </ul>
+      </div>
+      <div class="col-sm-3">
+        <a class="btn btn-primary btn-lg btn-block" id="askquestion">提问</a>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">简介</h3>
+          </div>
+          <div class="panel-body">
+            <p>这是一个简单的技术问答社区. 拒绝回复可见,拒绝灌水. 希望您能找到
+            您需要的答案.</p>
+            <a href="/about">More...</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+  $('#askquestion').click(function(e) {
+    var username = Cookies.get('uname');
+    if (username) {
+        window.location.pathname = '/ask';
+    }
+    else {
+        $('#loginmodal').modal('show');
+    }
+  });
+  </script>
+{% endblock %}

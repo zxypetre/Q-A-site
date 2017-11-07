@@ -1,0 +1,119 @@
+{% extends "index-base.html" %}
+
+{% block head %}
+  <title>BFH-提问</title>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-9">
+        <div class="alert alert-success"></div>
+        {% if edit %}
+          <h3>修改问题</h3>
+        {% else %}
+          <h3>提问</h3>
+        {% endif %}
+        <ul>
+          <li>Attention: 问题和回答使用的都是markdown格式</li>
+        </ul>
+        <input id="title" type="text" class="form-control" placeholder="问题...">
+        <div style="height:20em;" id="epiceditor"></div>
+        <input id="tags" type="text" class="form-control" placeholder="标签...">
+        <button id="submit-question" class="btn btn-primary">发布问题</button>
+      </div>
+      <div class="col-sm-3">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">提问的智慧</h3>
+          </div>
+          <div class="panel-body">
+            <ul>
+              <li>提问前请搜索有没有类似的问题,不要重复相同的问题</li>
+              <li>问题描述尽可能清晰具体,不要过于宽泛</li>
+            </ul>
+          </div>
+        </div>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">Markdown格式技巧</h3>
+          </div>
+          <div class="panel-body">
+            <ul>
+              <li>行尾添加2个空格或者添加一个空行就能换行</li>
+              <li>斜体: *hello* 或者 _world_</li>
+              <li>加粗: **hello** 或者 __world__</li>
+              <li>代码块: 添加空行,然后代码缩进4个空格</li>
+              <li>特殊字符: 用\避免转义;\*就是*本身</li>
+              <li>python: `__name__`可以以代码形式输出__name__</li>
+              <li><a href="http://wowubuntu.com/markdown/">markdown介绍</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="text/javascript" src="https://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+  <script src="/static/js/epiceditor.min.js"></script>
+  <script>
+    var opts = {
+        basePath: '',
+        theme: {
+            base: '/static/css/epiceditor.css',
+            preview: '/static/css/github.css',
+            editor: '/static/css/epic-dark.css'
+        },
+        button: {
+            bar: 'show'
+        },
+    }
+    var editor = new EpicEditor(opts);
+    {% if edit %}
+        var editid = window.location.pathname.slice(8);    //skip first 8 chars
+        $.getJSON('/ajax/edit-question', {editid:editid}, function(data) {
+            console.log(data);
+            $('#title').val(data.title);
+            $('#tags').val(data.tags);
+            editor.load(function() {
+                editor.importFile('epiceditor', data.content);
+            });
+        });
+    {% else %}
+        editor.load();
+    {% endif %}
+    $('#submit-question').click(function(event) {
+        var title = $('#title').val();
+        var tags = $('#tags').val();
+        var content = editor.exportFile();
+        $('.warning').hide();
+        if (title.length == 0 || title.length > 130) {
+            $('#title').after('<label class="warning">标题不能为空或者超过130个字</label>');
+        }
+        if (content.length == 0 || content.length > 5000) {
+            $('#epiceditor').after('<label class="warning">内容不能为空或者超过5000个字</label>');
+        }
+        if (tags.length > 50) {
+            $('#tags').after('<label class="warning">标签不能超过50个字</label>');
+        }
+        if (title.length > 0 && title.length < 130 && content.length > 0
+                && content.length < 5000 && tags.length < 50) {
+            var data = {tags: tags, title: title, content: content};
+            {% if edit %}
+                data.editid = editid;
+            {% endif %}
+            data._xsrf = Cookies.get('_xsrf');
+            $.post('/ajax/post-question', $.param(data), function(receive) {
+                console.log(receive);
+                json_data = $.parseJSON(receive);
+                if (json_data.result == 1) {
+                    window.location.pathname = '/p/'+json_data.pageid;
+                }
+                else {
+                    console.log('fail to post');
+                }
+            });
+        }
+    });
+  </script>
+{% endblock %}

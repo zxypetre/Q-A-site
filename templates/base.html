@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    {% block head %}{% endblock %}
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1"/>
+    <meta name="generator" content="zxdvd"/>
+    <meta name="applicable-device" content="pc">
+    <link rel="icon" href="/static/img/favicon-196x196.png?v=0.1">
+    <link rel="stylesheet" href="http://cdn.bootcss.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <style type="text/css">
+      @media only screen and (min-width: 980px) {
+        body {width:980px;margin:auto}
+      }
+    </style>
+    <script src="/static/js/jquery-1.11.3.min.js?v=0.1"></script>
+    <script src="/static/js/bootstrap.min.js?v=3.3.5"></script>
+</head>
+<body>
+  <div id="header">
+    {% block header %}{% endblock %}
+  </div>
+  <div id="content">
+    {% block content %}{% endblock %}
+  </div>
+  <div id="footer">
+    {% block footer %}{% endblock %}
+  </div>
+</body>
+</html>

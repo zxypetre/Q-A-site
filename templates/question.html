@@ -1,0 +1,261 @@
+{% extends "index-base.html" %}
+
+{% block head %}
+  <title>{{ out['title'] }} - BFH</title>
+{% endblock %}
+
+{% block content %}
+  <div class="container-fluid">
+    <div class="row">
+      <div class="col-sm-9">
+        <div>
+          <h3>{{ out['title'] }}</h3>
+            <div class="row">
+              <div class="col-sm-1">
+                <br>
+                <a href="javascript:void(0)" class="votelink">
+                  <span class="glyphicon glyphicon-chevron-up"></span>
+                  <br>
+                  <span>{{ out.get('voteCount', 0) }}</span>
+                  <br>
+                </a>
+                <a href="javascript:void(0)" class="votelink">
+                  <span class="glyphicon glyphicon-chevron-down"></span>
+                </a>
+              </div>
+              <div class="col-sm-11">
+                <div>
+                  {% for tag in out['tags'] %}
+                  <a class="btn btn-link btn-sm" href="/tag/{{ tag }}" role="button">{{ tag }}</a>
+                  {% endfor %}
+                  by <a href="/user/{{out.get('creator', 'X')[0]}}_{{out.get('creator', 'XX')[1]}}">{{ out.get('creator', 'XXX')[2] }}</a>
+                  @ {{ (out['lastModified']) }}
+                </div>
+                <div>
+                  
+                  {{ out['content'] }} 
+                
+                </div>
+                
+                <button class="btn btn-link btn-sm showcomments">
+                    {% if out.get('commentCount', 0) > 0 %}  
+                    {{ out.get('commentCount') }}个评论
+                    {% else %}
+                      添加评论
+                    {% endif %}
+                </button>
+                <button id="editpage" class="btn btn-link btn-sm pull-right">修改</button>
+                <div class="comments" style="display:none">
+                  {% if out.get('comments', None) %}
+                    {% for c in out.get('comments') %}
+                      <div class="well well-sm">
+                          {{ c.get('content', None) }}<br>
+                          by <a href="#">{{c.get('creator', 'XXX')[2]}}</a>
+                          @{{ (c['time']) }}
+                      </div>
+                    {% endfor %}
+                  {% endif %}
+                  <textarea class="form-control" row="2"></textarea>
+                  <a class="btn btn-primary addcomment" href="#" role="button">评论</a>
+                </div>
+              </div>
+            </div>
+        </div>
+        <hr>
+        {% for answer in answers %}
+        <div class="row">
+          <div class="col-sm-1">
+            <br>
+            <a href="javascript:void(0)" class="votelink">
+              <span class="glyphicon glyphicon-chevron-up"></span>
+              <br>
+              <span>{{ answer.get('voteCount', 0) }}</span>
+              <br>
+            </a>
+            <a href="javascript:void(0)" class="votelink">
+              <span class="glyphicon glyphicon-chevron-down"></span>
+            </a>
+          </div>
+          <div id="{{answer['_id']}}" class="answer col-sm-11">
+              
+             {{  answer['content']  }}
+            
+            by <a href="user/{{answer.get('creator', 'X')[0]}}_{{answer.get('creator', 'XX')[1]}}">{{answer.get('creator','XXX')[2]}}</a>
+            @{{ (answer['lastModified']) }}
+            <button class="btn btn-link btn-sm pull-right editanswer">修改</button>
+            <br>
+            <button class="btn btn-link btn-sm showcomments">
+              {% if answer.get('commentCount', 0) > 0 %}  
+              {{ answer.get('commentCount') }}个评论
+              {% else %}
+                添加评论
+              {% endif %}
+            </button>
+            <div class="comments" style="display:none">
+              {% if answer.get('comments', None) %}
+                {% for c in answer.get('comments') %}
+                  <div class="well well-sm">
+                      {{ c.get('content', None) }}<br>
+                      by <a href="#">{{c.get('creator', 'XXX')[2]}}</a>
+                      @{{ (c['time'])}}
+                  </div>
+                {% endfor %}
+              {% endif %}
+              <textarea class="form-control" row="2"></textarea>
+              <a class="btn btn-primary addcomment" href="#" role="button">评论</a>
+            </div>
+          </div>
+          <br>
+          <hr>
+        </div>
+        {% endfor %}
+        <h4 id="answer-title">我来回答</h4>
+        <div style="height:13em;" id="epiceditor"></div>
+        <button id="submit-answer" class="btn btn-primary">发布回答</button>
+      </div>
+      <div class="col-sm-3">
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title"></h3>
+          </div>
+          <div class="panel-body">
+          </div>
+        </div>
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h3 class="panel-title">Markdown格式技巧</h3>
+          </div>
+          <div class="panel-body">
+            <ul>
+              <li>行尾添加2个空格或者添加一个空行就能换行</li>
+              <li>斜体: *hello* 或者 _world_</li>
+              <li>加粗: **hello** 或者 __world__</li>
+              <li>代码块: 添加空行,然后代码缩进4个空格</li>
+              <li>特殊字符: 用\避免转义;\*就是*本身</li>
+              <li>python: `__name__`可以以代码形式输出__name__</li>
+              <li><a href="/help/markdown">一个简单的例子</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/epiceditor.min.js"></script>
+  <script>
+    var opts = {
+        basePath: '',
+        theme: {
+            base: '/static/css/epiceditor.css',
+            preview: '/static/css/github.css',
+            editor: '/static/css/epic-dark.css'
+        },
+        button: {
+            bar: 'show'
+        },
+    }
+    var editor = new EpicEditor(opts).load();
+
+    $('button.showcomments').click(function(e) {
+        $(this).siblings('.comments').toggle();
+    });
+    $('a.addcomment').click(function(e) {
+        var content = $(this).prev('textarea').val();
+        //check if it's a post comment or a answer comment
+        $('.warning').hide();
+        if (content.length > 150) {
+            $(this).before('<label class="warning">内容不能超过150字</label>');
+        }
+        else if (content.length > 0) {
+            var data = {content: content};
+            data._xsrf = Cookies.get('_xsrf');
+            data.pathname = window.location.pathname;
+            //check if it's a post comment or a answer comment
+            var answerid = $(this).parent().parent().attr('id');
+            if (answerid) {
+                data.answerid = answerid;
+            }
+            $.post('/ajax/post-comment', $.param(data), function(receive) {
+                json_data = JSON.parse(receive);
+                console.log(json_data);
+                if (json_data.result == 1) {
+                    location.reload();
+                }
+                else {
+                    console.log('fail to post comment');
+                }
+            });
+        }
+    });
+
+    var answerid;
+    $('div.answer > button.editanswer').click(function(e) {
+        answerid = $(this).parent().attr('id');
+        $('#answer-title').text('修改回答');
+        $.getJSON('/ajax/edit-answer', {_id:answerid}, function(data) {
+            console.log(data.content);
+            editor.unload();
+            editor.load(function() {
+                editor.importFile('epiceditor', data.content);
+            });
+        });
+    });
+
+    $('#submit-answer').click(function(event) {
+        var content = editor.exportFile();
+        $('.warning').hide();
+        if (content.length < 10 || content.length >= 4000) {
+            $('#epiceditor').after('<label class="warning">内容不能少于10个字或者超过4000字</label>');
+        }
+        if (content.length >= 10 && content.length < 4000) {
+            var data = {content: content};
+            data._xsrf = Cookies.get('_xsrf');
+            data.pathname = window.location.pathname;
+            console.log(answerid)
+            if (answerid) {
+                data.answerid = answerid
+            }
+            console.log(answerid,1)
+            $.post('/ajax/post-answer', $.param(data), function(receive) {
+                console.log(receive);
+                json_data = JSON.parse(receive);
+                console.log(json_data.result);
+                if (json_data.result == 1) {
+                    console.log(json_data.pageid);
+                    location.reload();
+                }
+                else {
+                    console.log('fail to post');
+                }
+            });
+        }
+    });
+
+    $('.votelink').click(function(e) {
+        var content = 'answer';
+        var contentid = $(this).parent().next().attr('id');
+        if (! contentid) {        //it's a vote of question
+            content = 'question';
+            contentid = window.location.pathname.slice(3);
+        }
+        var voteclass = $(this).children(':first').attr('class');
+        var vote = '';
+        if (voteclass.indexOf('up') > -1) {
+            vote = 'up';
+        }
+        if (voteclass.indexOf('down') > -1) {
+            vote = 'down';
+        }
+        var options = {content:content, _id:contentid, vote:vote};
+        console.log(options);
+        $.getJSON('/ajax/vote', options, function(data) {
+            console.log(data);
+            location.reload();
+        });
+    });
+
+    $('#editpage').click(function(e) {
+        window.location.pathname = '/edit' + window.location.pathname;
+    });
+  </script>
+{% endblock %}

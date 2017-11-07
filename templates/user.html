@@ -1,0 +1,40 @@
+{% extends "index-base.html" %}
+
+{% block head %}
+<title>{{ items.get('user', '') }} - BFH</title>
+{% endblock %}
+
+{% block content %}
+  <p>{{ items.get('user', '') }}</p>
+  <p>{{ items.get('descr', '') }}</p>
+  <p>{{ items.get('answer_count', '') }}</p>
+  <p>{{ items.get('question_count', '') }}</p>
+  <p>{{ items.get('member_time', '') }}</p>
+  <h3>答过的问题</h3>
+  <hr>
+  {% for q in items.get('answers', []) %}
+    <div class="question-name">
+      <h4><a href="https://www.bufeihua.cn/p/{{ q['_id'] }}">{{ q['title'] }}</a></h4>
+      <div>
+      {% for tag in q['tags'] %}
+      <a class="btn btn-link btn-sm" href="https://www.bufeihua.cntag/{{ tag }}" role="button">{{ tag }}</a>
+      {% endfor %}
+      by <a href="https://www.bufeihua.cn/user/{{q.get('creator','X')[0]}}_{{q.get('creator','XX')[1]}}"> {{q.get('creator','XXX')[2]}}</a>
+        @ {{ (q['lastModified']) }}
+      </div>
+    </div>
+  {% endfor %}
+  <h3>提出的问题</h3>
+  <hr>
+  {% for q in items.get('questions', []) %}
+    <div class="question-name">
+      <h4><a href="https://www.bufeihua.cn/p/{{ q['_id'] }}">{{ q['title'] }}</a></h4>
+      <div>
+      {% for tag in q['tags'] %}
+      <a class="btn btn-link btn-sm" href="https://www.bufeihua.cn/tag/{{ tag }}" role="button">{{ tag }}</a>
+      {% endfor %}
+      @ {{ (q['lastModified']) }}
+      </div>
+    </div>
+  {% endfor %}
+{% endblock %}

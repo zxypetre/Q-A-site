@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block header %}
+  <div class="navbar navbar-default">
+    <div class="container-fluid">
+      <div class="navbar-header">
+          <a class="navbar-brand" href="/">BFH</a>
+      </div>
+      <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
+        <form class="navbar-form navbar-left" role="search">
+          <div class="form-group">
+            <input type="search" class="form-control" name="search"
+                   placeholder="Search a question">
+          </div>
+          <button type="submit" class="btn btn-link">搜索</button>
+          <a class="btn btn-link" href="/ask">提问</a>
+        </form>
+        <ul class="nav navbar-nav navbar-right" id="navlogin">
+          <li><a href="/about">关于</a></li>
+          <li><a href="/login" data-toggle="modal" data-target="#loginmodal">
+                  一键登录</a></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+<div class="modal fade" id="loginmodal" role="dialog">
+  <div class="modal-dialog modal-sm">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal"
+          aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">加入BFH</h4>
+      </div>
+      <div class="modal-body">
+        <p><a href="/auth/github">github帐号登录</a></p>
+        <p><a href="/auth/baidu">百度帐号登录</a></p>
+      </div>
+      <div class="modal-footer">
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block footer %}
+<hr>
+<a id="switch-mob" class="center-block btn btn-link"><u>切换到移动版</u></a>
+<script src="http://apps.bdimg.com/libs/Cookies.js/0.4.0/cookies.min.js"></script>
+<script>
+var username = Cookies.get('uname');
+if (username) {
+    $('#navlogin > li:last').remove();
+    $('#navlogin').append('<li><a href="/user">'+username+'</a></li>');
+    $('#navlogin').append('<li><a href="#" id="logout">退出登录</a></li>');
+}
+$('#logout').click(function(e){
+    Cookies.remove('uname');
+    Cookies.remove('scookies');
+    $('#navlogin > li').remove();
+    $('#navlogin').append('<li><a href="/about">关于</a></li><li><a href="/login" data-toggle="modal" data-target="#loginmodal">一键登录</a></li>');
+});
+$('#switch-mob').click(function() {
+    Cookies.set('mob', '1');
+    location.reload();
+});
+</script>
+{% endblock %}
