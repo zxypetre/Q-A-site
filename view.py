@@ -1,4 +1,4 @@
-from flask import (Flask,render_template,request,redirect)
+from flask import (Flask,render_template,request,redirect,make_response)
 import pymongo
 from pymongo import MongoClient
 from datetime import datetime, timedelta
@@ -7,14 +7,20 @@ import markdown
 import json
 import urllib.parse
 import os
-
-
+import requests
+import uuid
+import redis
+import time
+rdb = redis.Redis(host='localhost',port=6379,db=0)
+redirect_uri = 'localhost:5000/callback',
+response_type = 'code',
+client_id = 'f23b87174992dd308549'
+client_secret = '88406c85b797a121e944293d88d6c9f237665de5'
 
 mongo = MongoClient()
 dbposts = mongo.posts
 dbanswers = mongo.answers
 dbusers = mongo.users
-
 
 app=Flask(__name__)
 
@@ -40,6 +46,39 @@ def changepage(tag=None):
     print(r,questions)
     return render_template('index.html',out=questions)
 
+@app.route('/auth/github', methods=['GET', 'POST'])
+def githublogin():
+    return redirect('https://github.com/login/oauth/authorize?redirect_url=localhost:5000/callback&response_type=code&client_id=f23b87174992dd308549')
+
+@app.route('/callback', methods=['GET', 'POST'])
+def login():
+    code = request.values.get('code')
+    access_token = requests.get('https://github.com/login/oauth/access_token?client_id=f23b87174992dd308549&client_secret=88406c85b797a121e944293d88d6c9f237665de5&code=%s&redirect_url=localhost:5000/callback'%(code)).content.decode("utf-8")
+    print(1,access_token)
+    api = requests.get('https://api.github.com/user?%s'%(access_token))
+    if api:
+        api = json.loads(api.text)
+        username = api['login']
+        uid = api['id']
+        print(username,uid)
+        r = dbusers.users.find_one({'uid':uid})
+        if r:
+            resp=make_response(redirect('/'))
+            uuid0 = str(uuid.uuid4())
+            rdb.set(uuid0,uid,ex=3600*24*30)
+            resp.set_cookie('username',uuid0,expires=time.time()+3600*24*30)
+            return resp
+        else:
+            dbusers.users.insert({'authdomain':'github','uid':uid,'username':username})
+            resp=make_response(redirect('/'))
+            uuid1 = str(uuid.uuid4())
+            print(uuid1)
+            rdb.set(uuid1,uid,ex=3600*24*30)
+            resp.set_cookie('username',uuid1,expires=time.time()+3600*24*30)
+            return resp 
+    else:
+        return redirect('/')
+
 @app.route('/user/<user>', methods=['GET', 'POST'])
 def answers(user):
     if '_' not in user:
@@ -60,6 +99,7 @@ def answers(user):
     items['questions'] = [i for i in posts if i]
     print(domain, uid,r,tmp,posts,items)
     return render_template('user.html', items = items)
+
 
 @app.route('/ask', methods=['GET', 'POST'])
 def ask():
@@ -99,8 +139,7 @@ def geturl():
             return redirect('/')
 
 
-def write_result(result, ok={'msg':'OK'}, fail={'msg':'FAIL'}
-            ):
+def write_result(result, ok={'msg':'OK'}, fail={'msg':'FAIL'}):
         if result:
             ok['result'] = 1
             return json.dumps(ok)
@@ -108,13 +147,25 @@ def write_result(result, ok={'msg':'OK'}, fail={'msg':'FAIL'}
             fail['result'] = -1
             return json.dumps(fail)
 
-current_user = ['github','107175','XuDong Zhang']
+def current():
+    uuid = request.cookies.get('username')
+    uid = int(rdb.get(uuid).decode("utf-8"))
+    print(uuid,uid)
+    if uid:
+        print(1)
+        r = dbusers.users.find_one({"uid":uid})
+        print(r)
+        domain = r['authdomain']
+        username = r['username']
+        return [domain,uid,username]
 
 @app.route('/ajax/post-question', methods=['GET', 'POST'])
 def postquestion():
         title = request.values.get('title', None)
         content = request.values.get('content', None)
         editid = request.values.get('editid', '')
+        current_user = current()
+        print(current_user)
         #valid editid means  user is editing the page but not create new page
         if editid:
             _id = mongo_check_id(editid)
@@ -151,6 +202,7 @@ def postanswer():
         content = request.values.get('content', None)
         answerid = request.values.get('answerid', None)
         print(pathname,content,answerid)
+        current_user = current()
         if not content:
             print(answerid,1)
             return write_result(False, fail={'msg': 'invalid content!'})
@@ -181,6 +233,7 @@ def getanswer():
         _id = mongo_check_id(_id)
         limits = {i: 1 for i in ('content', 'creator')}
         answer = dbanswers.answers.find_one({'_id': _id}, limits)
+        current_user = current()
         if not answer:
             return write_result(None, fail={'msg': 'cannot find this answer!'})
         #TODO XXX: currently only owner can edit his post
@@ -197,6 +250,7 @@ def getquestion():
         _id = mongo_check_id(editid)
         limits = {i: 1 for i in ('content', 'creator', 'tags', 'title')}
         question = dbposts.posts.find_one({'_id': _id}, limits)
+        current_user = current()
         if question:
             #TODO XXX: currently only owner can edit his post
             #in the future maybe more users can edit it (depend on privilige)
@@ -209,6 +263,7 @@ def postcomment():
     _id = request.values.get('pathname', '/p/')[3:]
     _id = mongo_check_id(_id)
     content = request.values.get('content', None)
+    current_user = current()
     if content:
         comment = dict(content=content)
         comment['creator'] = current_user
@@ -233,6 +288,7 @@ def getvote():
         content = request.values.get('content', None)
         vote = request.values.get('vote', None)
         _id = mongo_check_id(_id)
+        current_user = current()
         if content and vote:
             if vote == 'up':
                 voteresult = 'up'
