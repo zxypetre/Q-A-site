@@ -11,22 +11,22 @@ import requests
 import uuid
 import redis
 import time
-from settings import AUTH, HOST, REDIRECT_HOST, port, db
+from settings import AUTH, MONGO, REDIRECT_HOST, REDIS
 
-rdb = redis.Redis(host='HOST',port=port,db=db)
-redirect_uri = 'HOST/callback'
-client_id = AUTH['client_id']
-client_secret = AUTH['secret']
+rdb = redis.Redis(host=REDIS['host'],port=REDIS['port'],db=REDIS['db'])
+redirect_uri = REDIRECT_HOST+'/callback'
+client_id = AUTH['github']['client_id']
+client_secret = AUTH['github']['secret']
 
-mongo = MongoClient(host='REDIRECT_HOST',port=port)
+mongo = MongoClient(host=MONGO['host'],port=MONGO['port'])
 dbposts = mongo.posts
 dbanswers = mongo.answers
 dbusers = mongo.users
 
 app=Flask(__name__)
 
-@app.route('/', methods=['GET', 'POST'])
-@app.route('/tag/<tag>', methods=['GET', 'POST'])
+@app.route('/', methods=['GET'])
+@app.route('/tag/<tag>', methods=['GET'])
 def changepage(tag=None): 
     flt = {}
     if tag:
@@ -47,11 +47,11 @@ def changepage(tag=None):
     print(r,questions)
     return render_template('index.html',out=questions)
 
-@app.route('/auth/github', methods=['GET', 'POST'])
+@app.route('/auth/github')
 def githublogin():
     return redirect('https://github.com/login/oauth/authorize?redirect_url='+redirect_uri+'&response_type=code&client_id='+client_id)
 
-@app.route('/callback', methods=['GET', 'POST'])
+@app.route('/callback', methods=['GET'])
 def login():
     code = request.values.get('code')
     access_token = requests.get('https://github.com/login/oauth/access_token?client_id='+client_id+'&client_secret='+client_secret+'&code=%s&redirect_url='+redirect_uri%(code)).content.decode("utf-8")
@@ -78,7 +78,7 @@ def login():
     else:
         return redirect('/')
 
-@app.route('/user/<user>', methods=['GET', 'POST'])
+@app.route('/user/<user>', methods=['GET'])
 def answers(user):
     if '_' not in user:
         return redirect('/')
@@ -100,11 +100,11 @@ def answers(user):
     return render_template('user.html', items = items)
 
 
-@app.route('/ask', methods=['GET', 'POST'])
+@app.route('/ask', methods=['GET'])
 def ask():
     return render_template('ask.html')
 
-@app.route('/edit/p/<edit>', methods=['GET', 'POST'])
+@app.route('/edit/p/<edit>', methods=['GET'])
 def initialize(edit):
     return edit
 
@@ -113,7 +113,7 @@ def mongo_check_id(_id):
     if _id and objectid.ObjectId.is_valid(_id):
         return objectid.ObjectId(_id)
 
-@app.route('/p/<pageid>', methods=['GET', 'POST'])
+@app.route('/p/<pageid>', methods=['GET'])
 def getpageid(pageid):
         _id = mongo_check_id(pageid)
         #create_time = _id.generation_time
@@ -128,7 +128,7 @@ def getpageid(pageid):
             answers.append(doc)
         return render_template('question.html', out=question, answers=answers)
 
-@app.route('/about', methods=['GET', 'POST'])
+@app.route('/about', methods=['GET'])
 def geturl():
         post = dbposts.posts.find_one({'linkurl': '/about'})
         if post:
@@ -156,7 +156,7 @@ def current():
         username = r['username']
         return [domain,uid,username]
 
-@app.route('/ajax/post-question', methods=['GET', 'POST'])
+@app.route('/ajax/post-question', methods=['POST'])
 def postquestion():
         title = request.values.get('title', None)
         content = request.values.get('content', None)
@@ -190,7 +190,7 @@ def postquestion():
                 'be empty!'})
             
 
-@app.route('/ajax/post-answer', methods=['GET', 'POST'])
+@app.route('/ajax/post-answer', methods=['POST'])
 def postanswer():
         pathname = request.values.get('pathname', '/p/')
         pathname = pathname[3:]             #skip the /p/ in the head
@@ -219,7 +219,7 @@ def postanswer():
             return write_result(_id)
 
 
-@app.route('/ajax/edit-answer', methods=['GET', 'POST'])
+@app.route('/ajax/edit-answer', methods=['GET'])
 def getanswer():
         _id = request.values.get('_id', '')
         _id = mongo_check_id(_id)
@@ -236,7 +236,7 @@ def getanswer():
         answer.pop('_id')
         return json.dumps(answer)
 
-@app.route('/ajax/edit-question', methods=['GET', 'POST'])
+@app.route('/ajax/edit-question', methods=['GET'])
 def getquestion():
         editid = request.values.get('editid', '')
         _id = mongo_check_id(editid)
@@ -250,7 +250,7 @@ def getquestion():
                 question.pop('_id')
                 return write(json.dumps(question))
 
-@app.route('/ajax/post-comment', methods=['GET', 'POST'])
+@app.route('/ajax/post-comment', methods=['POST'])
 def postcomment():
     _id = request.values.get('pathname', '/p/')[3:]
     _id = mongo_check_id(_id)
@@ -274,7 +274,7 @@ def postcomment():
             return write_result(r.modified_count, ok={'pageid': str(_id)})
             
 
-@app.route('/ajax/vote', methods=['GET', 'POST'])
+@app.route('/ajax/vote', methods=['GET'])
 def getvote():
         _id = request.values.get('_id', None)
         content = request.values.get('content', None)
