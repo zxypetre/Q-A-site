@@ -42,9 +42,10 @@ def changepage(tag=None):
     limits = {i: 1 for i in ('content', 'creator', 'tags', 'title',
             'lastModified')}
     print(limits)
-    r = dbposts.posts.find(flt, limits)
-        .sort([('lastModified',-1)])
-        .skip(start).limit(10)
+    r = dbposts.posts.find(
+        flt, limits).sort([(
+        'lastModified',-1)]).skip(
+        start).limit(10)
     questions = [i for i in r if i]
     print(r,questions)
     return render_template('index.html',out=questions)
@@ -60,9 +61,9 @@ def login():
     code = request.values.get('code')
     access_token = requests.get(
         'https://github.com/login/oauth/access_token?client_id='
-        +client_id+'&client_secret='+client_secret+
-        '&code=%s&redirect_url='+redirect_uri%(code))
-        .content.decode("utf-8")
+        +client_id+'&client_secret='+client_secret
+        +'&code=%s&redirect_url='+redirect_uri%(
+        code)).content.decode("utf-8")
     api = requests.get('https://api.github.com/user?%s'%(access_token))
     if api:
         api = json.loads(api.text)
@@ -94,8 +95,8 @@ def answers(user):
     items={}
 
     #get all answers answered by someone
-    r = dbanswers.answers.find({'creator': {'$all': [domain, uid]}})
-                            .sort([('lastModified', -1)]).limit(10)
+    r = dbanswers.answers.find({'creator': {'$all': [
+        domain, uid]}}).sort([('lastModified', -1)]).limit(10)
     #get all posts against the answers
     tmp = [i.get('post_id', ' ') for i in r]
     posts = dbposts.posts.find({'_id': {'$in': tmp}},
@@ -221,8 +222,8 @@ def postanswer():
             r = dbanswers.answers.update_one(
                     {'_id': answerid, 'creator': list(current_user)},
                     {'$set': answer, '$push': {'history': answer},
-                        '$currentDate': {'lastModified': True}}
-                        )
+                    '$currentDate': {'lastModified': True}}
+                    )
             return write_result(r.modified_count)
         else:
             answer['lastModified'] = datetime.now()
