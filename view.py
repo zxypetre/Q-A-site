@@ -11,11 +11,12 @@ import requests
 import uuid
 import redis
 import time
-rdb = redis.Redis(host='localhost',port=6379,db=0)
-redirect_uri = 'localhost:5000/callback',
-response_type = 'code',
-client_id = 'f23b87174992dd308549'
-client_secret = '88406c85b797a121e944293d88d6c9f237665de5'
+from settings import AUTH, HOST, REDIRECT_HOST
+
+rdb = redis.Redis(host='HOST',port=6379,db=0)
+redirect_uri = 'REDIRECT_HOST/callback',
+client_id = AUTH['client_id']
+client_secret = AUTH['secret']
 
 mongo = MongoClient()
 dbposts = mongo.posts
@@ -48,12 +49,12 @@ def changepage(tag=None):
 
 @app.route('/auth/github', methods=['GET', 'POST'])
 def githublogin():
-    return redirect('https://github.com/login/oauth/authorize?redirect_url=localhost:5000/callback&response_type=code&client_id=f23b87174992dd308549')
+    return redirect('https://github.com/login/oauth/authorize?redirect_url='+redirect_uri+'&response_type=code&client_id='+client_id)
 
 @app.route('/callback', methods=['GET', 'POST'])
 def login():
     code = request.values.get('code')
-    access_token = requests.get('https://github.com/login/oauth/access_token?client_id=f23b87174992dd308549&client_secret=88406c85b797a121e944293d88d6c9f237665de5&code=%s&redirect_url=localhost:5000/callback'%(code)).content.decode("utf-8")
+    access_token = requests.get('https://github.com/login/oauth/access_token?client_id='+client_id+'&client_secret='+client_secret+'&code=%s&redirect_url='+redirect_uri%(code)).content.decode("utf-8")
     print(1,access_token)
     api = requests.get('https://api.github.com/user?%s'%(access_token))
     if api:
