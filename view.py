@@ -11,14 +11,14 @@ import requests
 import uuid
 import redis
 import time
-from settings import AUTH, HOST, REDIRECT_HOST
+from settings import AUTH, HOST, REDIRECT_HOST, port, db
 
-rdb = redis.Redis(host='HOST',port=6379,db=0)
-redirect_uri = 'REDIRECT_HOST/callback',
+rdb = redis.Redis(host='HOST',port=port,db=db)
+redirect_uri = 'HOST/callback'
 client_id = AUTH['client_id']
 client_secret = AUTH['secret']
 
-mongo = MongoClient()
+mongo = MongoClient(host='REDIRECT_HOST',port=port)
 dbposts = mongo.posts
 dbanswers = mongo.answers
 dbusers = mongo.users
@@ -55,7 +55,6 @@ def githublogin():
 def login():
     code = request.values.get('code')
     access_token = requests.get('https://github.com/login/oauth/access_token?client_id='+client_id+'&client_secret='+client_secret+'&code=%s&redirect_url='+redirect_uri%(code)).content.decode("utf-8")
-    print(1,access_token)
     api = requests.get('https://api.github.com/user?%s'%(access_token))
     if api:
         api = json.loads(api.text)
@@ -73,7 +72,6 @@ def login():
             dbusers.users.insert({'authdomain':'github','uid':uid,'username':username})
             resp=make_response(redirect('/'))
             uuid1 = str(uuid.uuid4())
-            print(uuid1)
             rdb.set(uuid1,uid,ex=3600*24*30)
             resp.set_cookie('username',uuid1,expires=time.time()+3600*24*30)
             return resp 
@@ -153,9 +151,7 @@ def current():
     uid = int(rdb.get(uuid).decode("utf-8"))
     print(uuid,uid)
     if uid:
-        print(1)
         r = dbusers.users.find_one({"uid":uid})
-        print(r)
         domain = r['authdomain']
         username = r['username']
         return [domain,uid,username]
@@ -166,7 +162,6 @@ def postquestion():
         content = request.values.get('content', None)
         editid = request.values.get('editid', '')
         current_user = current()
-        print(current_user)
         #valid editid means  user is editing the page but not create new page
         if editid:
             _id = mongo_check_id(editid)
@@ -205,15 +200,12 @@ def postanswer():
         print(pathname,content,answerid)
         current_user = current()
         if not content:
-            print(answerid,1)
             return write_result(False, fail={'msg': 'invalid content!'})
-        print(answerid,2)
         answer = dict(content=content, post_id=post_id)
         answer['creator'] = current_user
         #if has answerid, it's a edited answer otherwise a new answer
         #for a edited answer, need to check the creator
-        if answerid:
-            print(answerid,3)
+        if answerid: 
             answerid = mongo_check_id(answerid)
             r = dbanswers.answers.update_one(
                     {'_id': answerid, 'creator': list(current_user)},
@@ -221,7 +213,6 @@ def postanswer():
                         '$currentDate': {'lastModified': True}})
             return write_result(r.modified_count)
         else:
-            print(answerid,4)
             answer['lastModified'] = datetime.now()
             r = dbanswers.answers.insert_one(answer)
             _id = r.inserted_id
